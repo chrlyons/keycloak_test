@@ -1,0 +1,60 @@
+{
+    "name": "Keycloak Local",
+    "values": [
+        {
+            "key": "keycloak_url",
+            "value": "http://localhost:8080",
+            "enabled": true
+        },
+        {
+            "key": "admin_username",
+            "value": "admin",
+            "enabled": true
+        },
+        {
+            "key": "admin_password",
+            "value": "admin",
+            "enabled": true
+        },
+        {
+            "key": "realm_name",
+            "value": "test-realm",
+            "enabled": true
+        },
+        {
+            "key": "client_id",
+            "value": "test-client",
+            "enabled": true
+        },
+        {
+            "key": "client_id_uuid",
+            "value": "",
+            "enabled": true
+        },
+        {
+            "key": "client_secret",
+            "value": "",
+            "enabled": true
+        },
+        {
+            "key": "username",
+            "value": "test-user",
+            "enabled": true
+        },
+        {
+            "key": "password",
+            "value": "test-password",
+            "enabled": true
+        },
+        {
+            "key": "admin_token",
+            "value": "",
+            "enabled": true
+        },
+        {
+            "key": "refresh_token",
+            "value": "",
+            "enabled": true
+        }
+    ]
+}

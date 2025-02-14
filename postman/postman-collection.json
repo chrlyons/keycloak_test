@@ -1,0 +1,296 @@
+{
+    "info": {
+        "name": "Keycloak Authentication",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "1. Get Admin Token",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "var jsonData = JSON.parse(responseBody);",
+                            "pm.environment.set(\"admin_token\", jsonData.access_token);"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/x-www-form-urlencoded"
+                    }
+                ],
+                "body": {
+                    "mode": "urlencoded",
+                    "urlencoded": [
+                        {
+                            "key": "grant_type",
+                            "value": "password"
+                        },
+                        {
+                            "key": "client_id",
+                            "value": "admin-cli"
+                        },
+                        {
+                            "key": "username",
+                            "value": "{{admin_username}}"
+                        },
+                        {
+                            "key": "password",
+                            "value": "{{admin_password}}"
+                        }
+                    ]
+                },
+                "url": "{{keycloak_url}}/realms/master/protocol/openid-connect/token"
+            }
+        },
+        {
+            "name": "2. Create Realm",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{admin_token}}"
+                    },
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"id\": \"{{realm_name}}\",\n    \"realm\": \"{{realm_name}}\",\n    \"enabled\": true,\n    \"resetPasswordAllowed\": true,\n    \"rememberMe\": true,\n    \"verifyEmail\": false,\n    \"loginWithEmailAllowed\": true,\n    \"duplicateEmailsAllowed\": false,\n    \"sslRequired\": \"external\"\n}"
+                },
+                "url": "{{keycloak_url}}/admin/realms"
+            }
+        },
+        {
+            "name": "3a. Create Client",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{admin_token}}"
+                    },
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"clientId\": \"{{client_id}}\",\n    \"name\": \"{{client_id}}\",\n    \"enabled\": true,\n    \"protocol\": \"openid-connect\",\n    \"publicClient\": false,\n    \"authorizationServicesEnabled\": true,\n    \"serviceAccountsEnabled\": true,\n    \"directAccessGrantsEnabled\": true,\n    \"standardFlowEnabled\": true,\n    \"implicitFlowEnabled\": false,\n    \"frontchannelLogout\": true,\n    \"clientAuthenticatorType\": \"client-secret\",\n    \"redirectUris\": [\"*\"],\n    \"webOrigins\": [\"*\"]\n}"
+                },
+                "url": "{{keycloak_url}}/admin/realms/{{realm_name}}/clients"
+            }
+        },
+        {
+            "name": "3b. Get Clients",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "var jsonData = JSON.parse(responseBody);",
+                            "var client = jsonData.find(c => c.clientId === pm.environment.get(\"client_id\"));",
+                            "if (client && client.id) {",
+                            "    pm.environment.set(\"client_id_uuid\", client.id);",
+                            "    console.log(\"Found client UUID: \" + client.id);",
+                            "} else {",
+                            "    console.log(\"Client not found!\");",
+                            "}"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{admin_token}}"
+                    }
+                ],
+                "url": "{{keycloak_url}}/admin/realms/{{realm_name}}/clients"
+            }
+        },
+        {
+            "name": "4. Generate Client Secret",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "var jsonData = JSON.parse(responseBody);",
+                            "if (jsonData.value) {",
+                            "    pm.environment.set(\"client_secret\", jsonData.value);",
+                            "    console.log(\"Set client secret: \" + jsonData.value);",
+                            "}"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{admin_token}}"
+                    }
+                ],
+                "url": "{{keycloak_url}}/admin/realms/{{realm_name}}/clients/{{client_id_uuid}}/client-secret"
+            }
+        },
+        {
+            "name": "5. Create User",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{admin_token}}"
+                    },
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"username\": \"{{username}}\",\n    \"enabled\": true,\n    \"emailVerified\": true,\n    \"firstName\": \"Test\",\n    \"lastName\": \"User\",\n    \"email\": \"test@example.com\",\n    \"credentials\": [\n        {\n            \"type\": \"password\",\n            \"value\": \"{{password}}\",\n            \"temporary\": false\n        }\n    ],\n    \"requiredActions\": []\n}"
+                },
+                "url": "{{keycloak_url}}/admin/realms/{{realm_name}}/users"
+            }
+        },
+        {
+            "name": "6. Password Grant Token",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "var jsonData = JSON.parse(responseBody);",
+                            "if (jsonData.refresh_token) {",
+                            "    pm.environment.set(\"refresh_token\", jsonData.refresh_token);",
+                            "}"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/x-www-form-urlencoded"
+                    }
+                ],
+                "body": {
+                    "mode": "urlencoded",
+                    "urlencoded": [
+                        {
+                            "key": "grant_type",
+                            "value": "password"
+                        },
+                        {
+                            "key": "client_id",
+                            "value": "{{client_id}}"
+                        },
+                        {
+                            "key": "client_secret",
+                            "value": "{{client_secret}}"
+                        },
+                        {
+                            "key": "username",
+                            "value": "{{username}}"
+                        },
+                        {
+                            "key": "password",
+                            "value": "{{password}}"
+                        },
+                        {
+                            "key": "scope",
+                            "value": "openid email profile"
+                        }
+                    ]
+                },
+                "url": "{{keycloak_url}}/realms/{{realm_name}}/protocol/openid-connect/token"
+            }
+        },
+        {
+            "name": "7. Client Credentials Token",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/x-www-form-urlencoded"
+                    }
+                ],
+                "body": {
+                    "mode": "urlencoded",
+                    "urlencoded": [
+                        {
+                            "key": "grant_type",
+                            "value": "client_credentials"
+                        },
+                        {
+                            "key": "client_id",
+                            "value": "{{client_id}}"
+                        },
+                        {
+                            "key": "client_secret",
+                            "value": "{{client_secret}}"
+                        }
+                    ]
+                },
+                "url": "{{keycloak_url}}/realms/{{realm_name}}/protocol/openid-connect/token"
+            }
+        },
+        {
+            "name": "8. Refresh Token",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/x-www-form-urlencoded"
+                    }
+                ],
+                "body": {
+                    "mode": "urlencoded",
+                    "urlencoded": [
+                        {
+                            "key": "grant_type",
+                            "value": "refresh_token"
+                        },
+                        {
+                            "key": "client_id",
+                            "value": "{{client_id}}"
+                        },
+                        {
+                            "key": "client_secret",
+                            "value": "{{client_secret}}"
+                        },
+                        {
+                            "key": "refresh_token",
+                            "value": "{{refresh_token}}"
+                        }
+                    ]
+                },
+                "url": "{{keycloak_url}}/realms/{{realm_name}}/protocol/openid-connect/token"
+            }
+        }
+    ]
+}
